@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_CONN: "postgresql://hoodie:kuuli@postgres:5432/hoodie"
+      HEADLESS: "false"
+      DISPLAY: $DISPLAY  # Allow container to use host display
+      QT_X11_NO_MITSHM: "1"  # Prevent shared memory errors
+      SELECTORS_PATH: "app/selectors"  
+    depends_on:
+      - postgres
+    volumes:
+      - ./app:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix  # Share X11 socket with container
+
+  postgres:
+    build:
+      context: .
+      dockerfile: Dockerfile-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: hoodie
+      POSTGRES_PASSWORD: kuuli
+      POSTGRES_DB: hoodie
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db-contents:/var/lib/postgresql/data
+
+volumes:
+  db-contents:
