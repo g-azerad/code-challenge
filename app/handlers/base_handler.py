@@ -154,13 +154,18 @@ class BaseHandlerRefactor(ABC):
         """
         # await asyncio.sleep(3)
         price_elements = await page.query_selector_all(price_selector)
-        product_price = None
+        #product_price = None
 
         for element in price_elements:
             if await element.is_visible():
                 price_text = await element.inner_text()
                 if "$" in price_text and price_text.strip().startswith('$'):
-                    product_price = float(price_text.replace("$", "").strip())
+                    try:
+                        product_price = float(price_text.replace("$", "").strip())
+                    except ValueError:
+                        dat = price_text.replace("$", "").split("\n")
+                        price = ''.join([dat[0],'.',dat[1]])
+                        product_price = float(price)
                     break
 
         if product_price is None:
@@ -173,7 +178,12 @@ class BaseHandlerRefactor(ABC):
         msrp_element = await page.query_selector(msrp_selector)
         if msrp_element and await msrp_element.is_visible():
             msrp_text = await msrp_element.inner_text()
-            product_msrp = float(msrp_text.replace("$", "").strip())
+            try:
+                product_msrp = float(msrp_text.replace("$", "").strip())
+            except ValueError:
+                dat = price_text.replace("$", "").split("\n")
+                price = ''.join([dat[0],'.',dat[1]])
+                product_price = float(price)
 
         return product_price, product_msrp
 
@@ -362,6 +372,12 @@ class BaseHandlerRefactor(ABC):
             dispensary_image_element = await page.query_selector(product_variant_selector['dispensary_image_element'])
             if dispensary_image_element:
                 dispensary_image_url = await dispensary_image_element.get_attribute("src")
+                if(dispensary_image_url is None):
+                    dispensary_image_url = await dispensary_image_element.get_attribute("srcset")
+                    dat = dispensary_image_url.split(',')
+                    if(len(dat)>0):
+                        url = dat[0].replace("1x","").replace(" "," ")
+                        dispensary_image_url = url
 
         image_element = await page.query_selector(product_variant_selector['image_selector'])
         product_image_url = None
@@ -369,9 +385,15 @@ class BaseHandlerRefactor(ABC):
             product_image_url = await image_element.get_attribute("data-src")
             if not product_image_url:
                 product_image_url = await image_element.get_attribute("src")
-
+            if(product_image_url is None):
+                product_image_url = await image_element.get_attribute("srcset")
+                dat = product_image_url.split(',')
+                if(len(dat)>0):
+                    url = dat[0].replace("1x","").replace(" "," ")
+                    product_image_url = url
         product_name = await page.query_selector(product_variant_selector['product_name'])
-        prod_name = await product_name.inner_text() if dispensary_name else None
+        prod_name = await product_name.inner_text() 
+        #if dispensary_name else None
 
         base_details = {
             "dispensary_name": disp_name,
@@ -455,7 +477,6 @@ class BaseHandlerRefactor(ABC):
         # Get the product name
         product_name_element = await page.wait_for_selector(self.selectors["add_to_cart"]["prod_name"])
         prod_name = await product_name_element.inner_text()
-        
         # Extract price and MSRP
         for price_selector, msrp_selector in zip(self.selectors["add_to_cart"]["price_selectors"].values(),
                                                  self.selectors["add_to_cart"]["msrp_selectors"].values()):
@@ -480,12 +501,11 @@ class BaseHandlerRefactor(ABC):
         dispensary_name = await dispensary_name_element.inner_text() if dispensary_name_element else "Unknown Dispensary"
 
         cart_item_containers = await self._get_cart_item_containers(page, cart_container)
-
+        cart_details = None
         for cart_item_container in cart_item_containers:
             # Match product name
             item_name_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["item_name"])
             product_name = await item_name_elem.inner_text() if item_name_elem else "N/A"
-
             if prod_name in product_name:
                 # If a variant is provided, match it
                 if product_variant:
@@ -512,7 +532,6 @@ class BaseHandlerRefactor(ABC):
         """
         item_price_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["item_price"])
         item_price = await item_price_elem.inner_text() if item_price_elem else 'N/A'
-
         item_quantity_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["item_quantity"])
         item_quantity = await item_quantity_elem.inner_text() if item_quantity_elem else 'N/A'
 

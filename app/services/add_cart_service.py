@@ -33,6 +33,7 @@ class AddCartService:
             cart = await self.psql_repo.get_cart_by_id(psql_session, cart_id)
 
             cart_products = await self.psql_repo.get_products_by_cart_id(psql_session, cart_id)
+            print(cart_products)
             if cart_products:
                 exst_prod_url = cart_products[0].product_url
                 exst_domain = urlparse(exst_prod_url).netloc
@@ -58,13 +59,15 @@ class AddCartService:
                 async with await self.playwright_utils.new_page(context) as page:
                     price, msrp, cart_details = await handler.add_product(page=page, quantity=quantity, exst_quantity=exst_quantity or None, product_variant=product_variant, product_url=product_url)
                     storage_state = await self.playwright_utils.get_storage_state(context)
+                    print(f'save in cart: {cart_id} - {product_url}')
                     product_id = await self.psql_repo.save_product(psql_session, cart_id, product_url, product_variant, updated_quantity or quantity, price, msrp, storage_state, exst_id or None)
                     psql_session.commit()
+                    print(f'Confirmed')
                     
                     return {
-                    "product_id": product_id,
-                    "cart_details": cart_details
-                }
+                        "product_id": product_id,
+                        "cart_details": cart_details
+                    }
         except HTTPException as e:
             psql_session.rollback()
             raise e

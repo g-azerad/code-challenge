@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_CONN: "postgresql://hoodie:kuuli@postgres:5432/hoodie"
       HEADLESS: "false"
-      DISPLAY: $DISPLAY  # Allow container to use host display
+      #DISPLAY: $DISPLAY  # Allow container to use host display
       QT_X11_NO_MITSHM: "1"  # Prevent shared memory errors
       SELECTORS_PATH: "app/selectors"  
     depends_on:
@@ -30,6 +30,17 @@ services:
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - db-contents:/var/lib/postgresql/data
+  
+  pgadmin:
+    image: dpage/pgadmin4
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - postgres
 
 volumes:
   db-contents:

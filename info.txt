@@ -1,0 +1,20 @@
+No se han encontrado variaciones en los productos, salvo categorizacion en el tipo de productos.
+
+El popup que genera solo te la la informacion del nombre, se tendria que validar con otra llamada el carrito
+desde fuera, para asi obtener el precio final bien obtenido, ya que que la funcion principal no la coge.
+Para evitar eso, se ha de sobreescribir esa funcion en el LeaftyHandler, concretamente la funcion: 
+_extract_cart_item_details
+
+Al igual que eso, si tenemos que obtener las funciones getCart delete cart etc, tendremos que crear desde cero, 
+la logica para este caso.
+
+Realizadas funciones principales solicitadas y ademas se incluye el get carrito y verificacion del producto actual.
+
+Agreados para control:
+- PgAdmin Container
+
+Funciones no desarrolladas: 
+- Modificar productos: Actualmente se agregan directamente +1 unidad al carrito en base de datos local
+- Delete carrito producto: falta ajustar por completo el carrito del negocio y vincularlo para que funciones correctamente
+- Procesar Checkout: completar entero el carrito virtual y reflejarlo en el Real 
+- Resto de funciones para funcionalidad completa: falta ajustar por completo el carrito del negocio y vincularlo para que funciones correctamente
