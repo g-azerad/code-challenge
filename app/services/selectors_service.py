@@ -51,3 +51,17 @@ class SelectorsService:
 
         selectors = SelectorsService._selectors[bot_name]
         return selectors.get("checkout_url", "")
+    
+    @staticmethod
+    def get_cart_url(bot_name: str) -> str:
+        """
+        Retrieves the checkout URL for a specific bot.
+        :param bot_name: The name of the bot (e.g., 'iheartjane').
+        :return: The checkout URL.
+        """
+        bot_name = bot_name.lower()
+        if bot_name not in SelectorsService._selectors:
+            raise ValueError(f"No selectors found for bot '{bot_name}'.")
+
+        selectors = SelectorsService._selectors[bot_name]
+        return selectors.get("bag", "")

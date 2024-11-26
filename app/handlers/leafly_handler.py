@@ -439,15 +439,13 @@ class LeaflyHandler(BaseHandlerRefactor):
         """
         Extracts and returns the details (name, price, quantity) of a product from a cart item container.
         """
-        item_price_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["i_price"])
+        item_price_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["item_price"])
         item_price = await item_price_elem.inner_text() if item_price_elem else 'N/A'
         if(item_price!='N/A'):
             dat = item_price.replace("$", "").split("\n")
             item_price = ''.join([dat[1],'.',dat[2]])
-        item_quantity_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["i_quantity"])
+        item_quantity_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["item_quantity"])
         item_quantity = await item_quantity_elem.input_value() if item_quantity_elem else 'N/A'
-        if(item_quantity!='N/A'):
-            item_quantity='1'
 
         return {
             "dispensary_name": dispensary_name,
@@ -523,36 +521,33 @@ class LeaflyHandler(BaseHandlerRefactor):
         await self._click_add_to_cart(page, add_to_cart_selector=self.selectors["add_to_cart"]["click_add_to_cart"])
         await self._bag_check(page)
 
-        cart_container = await page.wait_for_selector(self.selectors["cart_verification"]["wait_for_cart_container"], timeout=5000)
-        await self._check_cart_empty(page, cart_container)
-
-        # Check the dispensary name
-        #disp_check = await page.wait_for_selector(self.selectors["add_to_cart"]["bag_check_selector"])
-        #dispensary_name_element = await disp_check.query_selector(self.selectors["add_to_cart"]["dispensary_name"])
-        
-        dispensary_name_element = await page.wait_for_selector(self.selectors["add_to_cart"]["dispensary_name"])
+        dispensary_name_element = await page.wait_for_selector(self.selectors["add_to_cart"]["dispensary_name"], timeout=5000)
         dispensary_name = await dispensary_name_element.inner_text() if dispensary_name_element else "Unknown Dispensary"
 
-        cart_item_containers = await self._get_cart_item_containers(page, cart_container)
-        cart_details = None
-        for cart_item_container in cart_item_containers:
-            # Match product name
-            item_name_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["item_name"])
-            product_name = await item_name_elem.inner_text() if item_name_elem else "N/A"
-            if prod_name in product_name:
-                # If a variant is provided, match it
-                if product_variant:
-                    product_variant_elem = await cart_item_container.query_selector(self.selectors["add_to_cart"]["product_variant"])
-                    if product_variant_elem:
-                        if await self._match_product_variant(product_variant_elem, product_variant, product_name):
-                            # If variant matches, extract product details
-                            cart_details = await self._extract_cart_item_details(cart_item_container, product_name, dispensary_name)
-                            break
-                        else:
-                            await self.raise_http_exception("Variant mismatch in cart", status_code=status.HTTP_404_NOT_FOUND)
-                else:
-                    cart_details = await self._extract_cart_item_details_from_products(page, product_name, dispensary_name)
-                    break
+        # get cart page
+        # cart_container = await page.wait_for_selector(self.selectors["cart_verification"]["wait_for_cart_container"], timeout=5000)
+        # await self._check_cart_empty(page, cart_container)
+        # cart_item_containers = await self._get_cart_item_containers(page, cart_container)
+        # cart_details = None
+        # for cart_item_container in cart_item_containers:
+        #     # Match product name
+        #     item_name_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["i_name"])
+        #     product_name = await item_name_elem.inner_text() if item_name_elem else "N/A"
+        #     if prod_name in product_name:
+        #         # If a variant is provided, match it
+        #         if product_variant:
+        #             product_variant_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["product_variant"])
+        #             if product_variant_elem:
+        #                 if await self._match_product_variant(product_variant_elem, product_variant, product_name):
+        #                     # If variant matches, extract product details
+        #                     cart_details = await self._extract_cart_item_details(cart_item_container, product_name, dispensary_name)
+        #                     break
+        #                 else:
+        #                     await self.raise_http_exception("Variant mismatch in cart", status_code=status.HTTP_404_NOT_FOUND)
+        #         else:
+        #             cart_details = await self._extract_cart_item_details_from_products(cart_container, product_name, dispensary_name)
+        #             break
+        cart_details = await self._extract_cart_item_details_from_products(page, prod_name, dispensary_name)
 
         if not cart_details:
             await self.raise_http_exception(f"Product {prod_name} not found in cart", status_code=status.HTTP_404_NOT_FOUND)
@@ -602,4 +597,48 @@ class LeaflyHandler(BaseHandlerRefactor):
         await delete_button.click()
         return {"message": "Product successfully deleted from cart."}
 
+
+    async def fetch_cart_details(self, page, product_url):
+        await self.navigate_to_url(page, product_url)
+        await self._initial_checks(page)
+
+        await self._click_on_cart(page)
+
+        # Wait for cart items container to be visible
+        cart_container = await page.wait_for_selector(self.selectors["cart_verification"]["wait_for_cart_container"], timeout=5000)
+
+        await self._check_cart_empty(page, cart_container)
+
+        cart_item_containers = await self._get_cart_item_containers(page, cart_container)
+
+        cart_data = []
+        for cart_item_container in cart_item_containers:
+            # Extract item details
+            item_name_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["i_name"])
+            item_name = await item_name_elem.inner_text() if item_name_elem else 'N/A'
+
+            item_price_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["i_price"])
+            item_price = await item_price_elem.inner_text() if item_price_elem else 'N/A'
+
+            item_quantity_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["i_quantity"])
+            item_quantity = await item_quantity_elem.input_value() if item_quantity_elem else 'N/A'
+
+            cart_data.append({
+                "item_name": item_name,
+                "item_price": item_price,
+                "item_quantity": item_quantity
+            })
+
+        # Fetch subtotal
+        subtotal_element = await page.query_selector(self.selectors["cart_verification"]["subtotal"])
+        if subtotal_element:
+            subtotal_str = await subtotal_element.inner_text()
+            price = subtotal_str.strip('$').strip()
+        else:
+            price = 'N/A'
+
+        return {
+            "cart_items": cart_data,
+            "subtotal": price
+        }
 
