@@ -497,6 +497,7 @@ class LeaflyHandler(BaseHandlerRefactor):
             "variant_name_selector" : self.selectors["add_to_cart"]["variant_name_selector"],
             "variant_price_selector" : self.selectors["add_to_cart"].get("variant_price_selector"),
         }
+
         await self._handle_product_variant(
             page=page, 
             provided_variant=product_variant,
@@ -506,24 +507,29 @@ class LeaflyHandler(BaseHandlerRefactor):
         # Get the product name
         product_name_element = await page.wait_for_selector(self.selectors["add_to_cart"]["prod_name"])
         prod_name = await product_name_element.inner_text()
+
         # Extract price and MSRP
         for price_selector, msrp_selector in zip(self.selectors["add_to_cart"]["price_selectors"].values(),
                                                  self.selectors["add_to_cart"]["msrp_selectors"].values()):
+            print(price_selector)
             if await page.is_visible(price_selector):
                 price, msrp = await self._extract_price_and_msrp(
                     page,
                     price_selector=price_selector,
                     msrp_selector=msrp_selector,
                 )
+                print(f'{price} - {msrp}')
                 break
 
         await self._select_quantity(page, quantity, exst_quantity)
         await self._click_add_to_cart(page, add_to_cart_selector=self.selectors["add_to_cart"]["click_add_to_cart"])
         await self._bag_check(page)
 
-        dispensary_name_element = await page.wait_for_selector(self.selectors["add_to_cart"]["dispensary_name"], timeout=5000)
+
+        dispensary_name_element = await page.wait_for_selector(self.selectors["add_to_cart"]["dispensary_name"], timeout=10000)
         dispensary_name = await dispensary_name_element.inner_text() if dispensary_name_element else "Unknown Dispensary"
-        
+        # get product price and quantity
+
         await self._click_on_cart(page=page)
         # get cart page
         cart_container = await page.wait_for_selector(self.selectors["cart_verification"]["wait_for_cart_container"], timeout=5000)
@@ -553,6 +559,9 @@ class LeaflyHandler(BaseHandlerRefactor):
         if not cart_details:
             await self.raise_http_exception(f"Product {prod_name} not found in cart", status_code=status.HTTP_404_NOT_FOUND)
 
+        cart_details['item_price'] = price
+        if(msrp is not None):
+            cart_details['item_msrp'] = msrp
         return price, msrp, cart_details
     
     # not finished

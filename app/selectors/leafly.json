@@ -41,8 +41,8 @@
                 "non_variant": "div[data-testid='variant-select__price']"
             },
             "msrp_selectors" : {
-                "variant": "div[data-testid='variant-select__price']",
-                "non_variant": "div[data-testid='variant-select__price']"
+                "variant": "div[class='line-through text-xs']",
+                "non_variant": "div[class='line-through text-xs']"
             },
             "quantity_selector": "input[data-testid='quantity-selector-value']",
             "quantity_selector_wait_for": "input[data-testid='quantity-selector-increment']",
