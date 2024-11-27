@@ -523,31 +523,32 @@ class LeaflyHandler(BaseHandlerRefactor):
 
         dispensary_name_element = await page.wait_for_selector(self.selectors["add_to_cart"]["dispensary_name"], timeout=5000)
         dispensary_name = await dispensary_name_element.inner_text() if dispensary_name_element else "Unknown Dispensary"
-
+        
+        await self._click_on_cart(page=page)
         # get cart page
-        # cart_container = await page.wait_for_selector(self.selectors["cart_verification"]["wait_for_cart_container"], timeout=5000)
-        # await self._check_cart_empty(page, cart_container)
-        # cart_item_containers = await self._get_cart_item_containers(page, cart_container)
-        # cart_details = None
-        # for cart_item_container in cart_item_containers:
-        #     # Match product name
-        #     item_name_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["i_name"])
-        #     product_name = await item_name_elem.inner_text() if item_name_elem else "N/A"
-        #     if prod_name in product_name:
-        #         # If a variant is provided, match it
-        #         if product_variant:
-        #             product_variant_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["product_variant"])
-        #             if product_variant_elem:
-        #                 if await self._match_product_variant(product_variant_elem, product_variant, product_name):
-        #                     # If variant matches, extract product details
-        #                     cart_details = await self._extract_cart_item_details(cart_item_container, product_name, dispensary_name)
-        #                     break
-        #                 else:
-        #                     await self.raise_http_exception("Variant mismatch in cart", status_code=status.HTTP_404_NOT_FOUND)
-        #         else:
-        #             cart_details = await self._extract_cart_item_details_from_products(cart_container, product_name, dispensary_name)
-        #             break
-        cart_details = await self._extract_cart_item_details_from_products(page, prod_name, dispensary_name)
+        cart_container = await page.wait_for_selector(self.selectors["cart_verification"]["wait_for_cart_container"], timeout=5000)
+        await self._check_cart_empty(page, cart_container)
+        cart_item_containers = await self._get_cart_item_containers(page, cart_container)
+        cart_details = None
+        for cart_item_container in cart_item_containers:
+            # Match product name
+            item_name_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["i_name"])
+            product_name = await item_name_elem.inner_text() if item_name_elem else "N/A"
+            if prod_name in product_name:
+                # If a variant is provided, match it
+                if product_variant:
+                    product_variant_elem = await cart_item_container.query_selector(self.selectors["cart_verification"]["product_variant"])
+                    if product_variant_elem:
+                        if await self._match_product_variant(product_variant_elem, product_variant, product_name):
+                            # If variant matches, extract product details
+                            cart_details = await self._extract_cart_item_details(cart_item_container, product_name, dispensary_name)
+                            break
+                        else:
+                            await self.raise_http_exception("Variant mismatch in cart", status_code=status.HTTP_404_NOT_FOUND)
+                else:
+                    cart_details = await self._extract_cart_item_details_from_products(cart_container, product_name, dispensary_name)
+                    break
+        #cart_details = await self._extract_cart_item_details_from_products(page, prod_name, dispensary_name)
 
         if not cart_details:
             await self.raise_http_exception(f"Product {prod_name} not found in cart", status_code=status.HTTP_404_NOT_FOUND)

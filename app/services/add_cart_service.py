@@ -33,7 +33,6 @@ class AddCartService:
             cart = await self.psql_repo.get_cart_by_id(psql_session, cart_id)
 
             cart_products = await self.psql_repo.get_products_by_cart_id(psql_session, cart_id)
-            print(cart_products)
             if cart_products:
                 exst_prod_url = cart_products[0].product_url
                 exst_domain = urlparse(exst_prod_url).netloc
