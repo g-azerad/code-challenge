@@ -1,3 +1,18 @@
+# Custom part
+python/
+dependencies_layer.zip
+app_package.zip
+**/.terraform/
+*.tfstate
+*.tfstate.*
+.terraformrc
+.aws/
+archive/
+node_modules/
+playwright/test-results
+.aws-sam/
+ssh/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

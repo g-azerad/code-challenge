@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from app.services.add_cart_service import CartService
+from app.services.add_cart_service import AddCartService
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def mock_playwright_utils():
 
 @pytest.fixture
 def cart_service(mock_redis_repo, mock_playwright_utils):
-    return CartService(mock_redis_repo, mock_playwright_utils)
+    return AddCartService(mock_redis_repo, mock_playwright_utils)
 
 
 @pytest.mark.asyncio

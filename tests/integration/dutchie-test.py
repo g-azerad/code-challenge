@@ -1,5 +1,6 @@
 import sys
 import time
+import os
 
 import requests
 
@@ -30,7 +31,7 @@ products_by_dispensary = {
     }
 }
 
-base_url = "http://localhost:8000/"
+base_url = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 def main():
     try:

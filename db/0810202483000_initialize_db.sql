@@ -1,3 +1,16 @@
+CREATE DATABASE uni;
+
+\c uni;
+
+-- Creates user and grants rights
+\set db_password 'kuuli'
+CREATE ROLE hoodie WITH LOGIN PASSWORD :'db_password';
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO hoodie;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO hoodie;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO hoodie;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TYPES TO hoodie;
+
+-- Create tables
 CREATE TYPE cart_status AS ENUM ('active', 'ordered', 'inactive', 'deleted');
 
 CREATE TABLE carts(

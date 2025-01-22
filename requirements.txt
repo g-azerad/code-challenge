@@ -37,7 +37,7 @@ platformdirs==4.2.2
 prompt_toolkit==3.0.47
 psutil==6.0.0
 pure_eval==0.2.3
-psycopg2==2.9.9
+psycopg2-binary==2.9.9
 pydantic==2.8.2
 pydantic_core==2.20.1
 pyee==11.1.0

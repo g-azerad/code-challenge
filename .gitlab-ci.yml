@@ -1,0 +1,332 @@
+---
+# Workflow rules : prevent duplicate pipeline execution
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_TAG
+
+.rules:
+  # Manages CI/CD process for release and release candidate tagging events
+  tag_release: $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/ && $DEPLOY_MODE != "Y"
+  tag_release_candidate: $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+-rc\d+$/ && $DEPLOY_MODE != "Y"
+  
+  # Only deploy an existing tagged package from web pipelines
+  deploy_latest: $CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_REF_NAME == $CI_DEFAULT_BRANCH && $DEPLOY_MODE == "Y"
+  deploy_release: $CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/ && $DEPLOY_MODE == "Y"
+  deploy_release_candidate: $CI_PIPELINE_SOURCE == "web" && $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+-rc\d+$/ && $DEPLOY_MODE == "Y"
+  
+  # For test and push we only give the "if" condition because
+  # we will need to combine it with a "changes" condition
+  # Test pipeline : for commits pushed on a branch
+  test: $CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+  # Validate pipeline : for merge request events
+  validate: $CI_PIPELINE_SOURCE == "merge_request_event"
+  # Latest pipeline : for commits pushed on the main branch
+  latest: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+.changes:
+  build:
+    - app/**/*
+    - requirements.txt
+    - .gitlab-ci.yml
+    - Dockerfile
+  package:
+    - Dockerfile
+    - app/**/*
+    - requirements.txt
+    - requirements_aws.txt
+  deploy_lambda:
+    - app/**/*
+  deploy_layer:
+    - requirements.txt
+    - requirements_aws.txt
+  deploy_db:
+    - db/changelog.sql
+
+variables:  # Change pip's cache directory to be inside the project directory since we can only cache local items.
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+stages:
+  - lint
+  - unit-test
+  - test
+  - clean
+  - package
+  - deploy
+
+# Python code linter that outputs to Gitlab CI Code climat format
+pylint:
+  stage: lint
+  image: registry.gitlab.com/pipeline-components/pylint:latest
+  rules:
+    - if: $DEPLOY_MODE == "Y"
+      when: never
+    - if: !reference [.rules, test]
+      changes: !reference [.changes, build]
+  cache:
+    paths:
+      - .cache/pip
+    key:
+      files:
+        - requirements.txt
+  script:
+    - pip install -r requirements.txt
+    - pylint --exit-zero --ignore=__pycache__ --load-plugins=pylint_gitlab --output-format=gitlab-codeclimate:codeclimate.json app/
+  artifacts:
+    reports:
+      codequality: codeclimate.json
+    when: always
+
+# Unit tests with Python unittest library, mocking the database
+unit-test:
+  stage: unit-test
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/python:${PYTHON_VERSION}-slim
+  rules:
+    - if: $DEPLOY_MODE == "Y"
+      when: never
+    - if: !reference [.rules, test]
+      changes: !reference [.changes, build]
+  script:
+    # - pip install -r requirements.txt
+    - PYTHONPATH=app:. python -m unittest tests/services/test_cart_service.py
+    - PYTHONPATH=app:. python -m unittest tests/services/test_checkout_service.py
+
+# Docker image generation to internal repo for test use
+gen-docker-test:
+  stage: test
+  image:
+    name: gcr.io/kaniko-project/executor:$KANIKO_VERSION
+    entrypoint: [""]
+  rules:
+    - if: $DEPLOY_MODE == "Y"
+      when: never
+    - if: !reference [.rules, test]
+      changes: !reference [.changes, build]
+  script:
+    - IMAGE_TAG=$CI_COMMIT_SHORT_SHA
+    - echo "Info - the image will be pushed with '$IMAGE_TAG' tag"
+    - echo "$GITLAB_ROOT_CERT" >> /kaniko/ssl/certs/ca-certificates.crt
+    - /kaniko/executor
+      --context "$CI_PROJECT_DIR"
+      --build-arg PYTHON_VERSION=$PYTHON_VERSION
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${CI_REGISTRY_IMAGE}:${IMAGE_TAG}"
+
+# Integration tests run with the Postgres database
+# and the application as services
+integration-test:
+  stage: test
+  image: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  rules:
+    - if: $DEPLOY_MODE == "Y"
+      when: never
+    - if: !reference [.rules, test]
+      changes: !reference [.changes, build]
+  needs: ["gen-docker-test"]
+  variables:
+    POSTGRES_USER: postgres
+    POSTGRES_HOST_AUTH_METHOD: trust
+    DB_HOST: db
+    DB_PORT: 5432
+    DB_USER: hoodie
+    DB_PASSWORD: kuuli
+    DB_NAME: uni
+    API_BASE_URL: http://api:8000
+  services:
+    - name: ${CI_REGISTRY_IMAGE}/postgres-uni:latest
+      alias: db
+    - name: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+      alias: api
+  script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends postgresql-client
+    - export PGPASSWORD=$DB_PASSWORD
+    - psql -h "db" -U "$DB_USER" -d $DB_NAME -c "SELECT * FROM carts;"
+    - echo "INFO - Launching integration tests..."
+    - PYTHONPATH=app:. python tests/integration/dutchie-test.py
+    - echo "INFO - DONE"
+    - echo "INFO - Launching playwright tests..."
+    - PYTHONPATH=app:. python tests/utils/test_playwright_utils.py
+    - echo "INFO - DONE"
+
+# Cleaning the previous temporary docker image from Gitlab registry
+clean-test-docker:
+  stage: clean
+  rules:
+    - if: $DEPLOY_MODE == "Y"
+      when: never
+    - if: !reference [.rules, test]
+      changes: !reference [.changes, build]
+  variables:
+    IMAGE: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:latest
+  script:
+    - apk update
+    - apk add curl
+    - curl --fail-with-body --location "https://github.com/regclient/regclient/releases/download/${REGCTL_VERSION}/regctl-linux-amd64" > /usr/bin/regctl
+    - chmod 755 /usr/bin/regctl
+    - regctl registry login ${CI_REGISTRY} -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD}
+    - regctl tag rm $IMAGE
+
+# Package the application and publish it to Docker Hub
+package-docker:
+  stage: package
+  image:
+    name: gcr.io/kaniko-project/executor:$KANIKO_VERSION
+    entrypoint: [""]
+  rules:
+    - if: $DEPLOY_MODE == "Y"
+      when: never
+    - if: !reference [.rules, tag_release]
+      changes: !reference [.changes, package]
+    - if: !reference [.rules, latest]
+      changes: !reference [.changes, package]
+  script:
+    - if [ X"$CI_COMMIT_TAG" == "X" ]; then IMAGE_TAG="latest"; else IMAGE_TAG=$CI_COMMIT_TAG; fi
+    - echo "Info - the image will be pushed with '$IMAGE_TAG' tag"
+    - |-
+      echo "
+      {
+        \"auths\":{
+          \"${DOCKERHUB_REGISTRY}\":{
+            \"auth\":\"$(printf "%s:%s" "${DOCKERHUB_USER}" "${DOCKERHUB_PASSWORD}" | base64 | tr -d '\n')\"
+          }
+        }
+      }" > /kaniko/.docker/config.json
+    - /kaniko/executor
+      --context "$CI_PROJECT_DIR"
+      --build-arg PYTHON_VERSION=$PYTHON_VERSION
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+
+# Create zip packages to be exported to AWS Lambda
+package-lambda:
+  stage: package
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/python:${PYTHON_VERSION}-slim
+  artifacts:
+    paths:
+      - app_package.zip
+      - dependencies_layer.zip
+    expire_in: 1 day
+  rules:
+    - if: !reference [.rules, tag_release]
+      changes: !reference [.changes, package]
+    - if: !reference [.rules, latest]
+      changes: !reference [.changes, package]
+    - if: !reference [.rules, deploy_release]
+    - if: !reference [.rules, deploy_latest]
+  script:
+    - apt update && apt install --no-install-recommends -y zip
+    - zip -r app_package.zip lambda_function.py app/
+    - 'pip install --platform manylinux2014_x86_64 --target . --python-version 3.12 --only-binary=:all: -r requirements.txt -r requirements_aws.txt -t ./python/'
+    - zip -r dependencies_layer.zip python
+
+# Deploy the AWS Lambda
+deploy-app-lambda:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
+  rules:
+    - if: !reference [.rules, tag_release]
+      changes: !reference [.changes, deploy_lambda]
+    - if: !reference [.rules, latest]
+      changes: !reference [.changes, deploy_lambda]
+    - if: !reference [.rules, deploy_release]
+    - if: !reference [.rules, deploy_latest]
+  script:
+    # Deploy the Lambda function
+    - echo "Deploying Lambda function..."
+    - aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://app_package.zip
+
+# Deploy the AWS Lambda layer
+deploy-app-layer:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
+  rules:
+    - if: !reference [.rules, tag_release]
+      changes: !reference [.changes, deploy_layer]
+    - if: !reference [.rules, latest]
+      changes: !reference [.changes, deploy_layer]
+    - if: !reference [.rules, deploy_release]
+    - if: !reference [.rules, deploy_latest]
+  script:
+    # Deploy the dependencies layer
+    - echo "Deploying Lambda layer..."
+    - aws lambda publish-layer-version --layer-name $LAYER_NAME --zip-file fileb://dependencies_layer.zip --compatible-runtimes python${PYTHON_VERSION}
+    # Capture the new layer ARN
+    - LAYER_ARN=$(aws lambda list-layer-versions --layer-name $LAYER_NAME --query 'LayerVersions[0].LayerVersionArn' --output text)
+    # Update the Lambda function to use the new layer
+    - echo "Updating Lambda function with new layer..."
+    - aws lambda update-function-configuration --function-name $FUNCTION_NAME --layers $LAYER_ARN
+
+# Deploy database changes with liquibase
+# Helper functions to determine if the database is ready for deployments (lines 28-33) or rollbacks (lines 35-42) when tag is applied.
+.functions: &functions |
+  function isUpToDate(){
+    status=$(liquibase status --verbose)
+    if [[ $status == *'is up to date'* ]]; then
+      echo "database is already up to date" & exit 0
+    fi;
+  }
+
+  function isRollback(){
+    if [ -z "$TAG" ]; then
+      echo "No TAG provided, running any pending changes"
+    elif [[ "$(liquibase rollbackSQL $TAG)" ]]; then
+      liquibase --logLevel=info --logFile=${CI_JOB_NAME}_${CI_PIPELINE_ID}.log rollback $TAG && exit 0
+    else exit 0
+    fi;
+  }
+
+  function setupSshTunnel(){
+    # Installing OpenSSH
+    apt-get update && apt-get install -y --no-install-recommends openssh-client
+    rm -rf /var/lib/apt/lists/*
+    mkdir -p ~/.ssh
+    # Adding ssh key to the configuration
+    echo "$SSH_PRIVATE_KEY_BASE64" | base64 -d > ~/.ssh/id_ed25519
+    chmod 600 ~/.ssh/id_ed25519
+    echo "$SSH_PUBLIC_KEY_BASE64" | base64 -d > ~/.ssh/id_ed25519.pub
+    # Adding Bastion host fingerprint
+    ssh-keyscan -H $BASTION_HOST >> ~/.ssh/known_hosts || true
+    # Setting up the SSH tunnel configuration
+    mv "$SSH_TUNNEL_CONFIG" ~/.ssh/config
+    ls -l ~/.ssh
+    cat ~/.ssh/config
+    ssh -f aws-bastion -N
+  }
+
+# Deploy database changes
+deploy-db:
+  stage: deploy
+  environment: prod
+  image: 
+    name: liquibase/liquibase:latest
+    entrypoint: [""]
+  rules:
+    - if: !reference [.rules, tag_release]
+      changes: !reference [.changes, deploy_db]
+    - if: !reference [.rules, latest]
+      changes: !reference [.changes, deploy_db]
+    - if: !reference [.rules, deploy_release]
+    - if: !reference [.rules, deploy_latest]
+  script:
+    - *functions
+    # - setupSshTunnel
+    - ssh -f aws-bastion -N
+    - isRollback
+    - isUpToDate
+    - liquibase checks run
+    - liquibase updateSQL
+    - liquibase update
+    # - liquibase rollbackOneUpdate --force # Requires license
+    - liquibase tag $CI_PIPELINE_ID
+    - liquibase --logFile=${CI_JOB_NAME}_${CI_PIPELINE_ID}.log --logLevel=info update
+    - liquibase history
+  artifacts:
+      paths:
+        - ${CI_JOB_NAME}_${CI_PIPELINE_ID}.log
+      expire_in: 1 day

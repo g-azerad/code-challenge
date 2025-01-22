@@ -1,17 +1,21 @@
-FROM python:3.12
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim
+ARG PLAYWRIGHT_VERSION=1.46.0
 
 # Install Xvfb and dependencies
-RUN apt-get update && apt-get install -y xvfb
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb
 
 # Install Playwright and dependencies
-RUN pip install playwright==1.46.0
-RUN playwright install --with-deps
+RUN pip install --no-cache-dir playwright==${PLAYWRIGHT_VERSION} && \
+    playwright install --with-deps
 
-ADD requirements.txt .
-RUN pip install -r requirements.txt
+# Application part; install requirements
+COPY requirements.txt /tmp/requirements.txt
+COPY requirements_aws.txt /tmp/requirements_aws.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements_aws.txt
+
+COPY app app
 
 EXPOSE 8000
-
-ADD app app
 
 CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 & export DISPLAY=:99 && fastapi run ./app/main.py"]
