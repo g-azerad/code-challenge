@@ -6,9 +6,9 @@ terraform {
     }
   }
   backend "http" {
-    address        = "https://gitlab.perso.com/api/v4/projects/6/terraform/state/${var.tf_state_name}"
-    lock_address   = "https://gitlab.perso.com/api/v4/projects/6/terraform/state/${var.tf_state_name}/lock"
-    unlock_address = "https://gitlab.perso.com/api/v4/projects/6/terraform/state/${var.tf_state_name}/lock"
+    address        = "https://gitlab.perso.com/api/v4/projects/${var.gitlab_project_id}/terraform/state/${var.tf_state_name}"
+    lock_address   = "https://gitlab.perso.com/api/v4/projects/${var.gitlab_project_id}/terraform/state/${var.tf_state_name}/lock"
+    unlock_address = "https://gitlab.perso.com/api/v4/projects/${var.gitlab_project_id}/terraform/state/${var.tf_state_name}/lock"
   }
   required_version = ">= 1.10.0"
 }
