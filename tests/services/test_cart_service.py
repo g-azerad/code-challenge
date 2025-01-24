@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock
-from app.services.add_cart_service import CartService
+from app.services.add_cart_service import AddCartService
 
 
 @pytest.fixture
@@ -12,16 +12,20 @@ def mock_redis_repo():
 def mock_playwright_utils():
     return AsyncMock()
 
+@pytest.fixture
+def mock_handler_factory():
+    return AsyncMock()
 
 @pytest.fixture
-def cart_service(mock_redis_repo, mock_playwright_utils):
-    return CartService(mock_redis_repo, mock_playwright_utils)
+def cart_service(mock_redis_repo, mock_playwright_utils, mock_handler_factory):
+    return AddCartService(mock_redis_repo, mock_playwright_utils, mock_handler_factory)
 
 
 @pytest.mark.asyncio
 async def test_add_to_cart_success(cart_service):
     product_url = "http://example.com/product"
     cm_id = "test_cm_id"
+    product_variant = "variant_123"
     quantity = 1
 
     mock_context = AsyncMock()
@@ -37,7 +41,7 @@ async def test_add_to_cart_success(cart_service):
     cart_service._perform_add_to_cart = AsyncMock(return_value={"success": True})
     cart_service._save_session_data = AsyncMock()
 
-    result = await cart_service.add_to_cart(product_url, cm_id, quantity)
+    result = await cart_service.add_to_cart(product_url, cm_id, product_variant, quantity)
 
     assert result["status"] == "success"
     assert "session_id" in result
@@ -49,6 +53,7 @@ async def test_add_to_cart_success(cart_service):
 async def test_add_to_cart_failure(cart_service):
     product_url = "http://example.com/product"
     cm_id = "test_cm_id"
+    product_variant = "variant_123"
     quantity = 20
 
     mock_context = AsyncMock()
@@ -59,7 +64,7 @@ async def test_add_to_cart_failure(cart_service):
     cart_service._perform_add_to_cart = AsyncMock(return_value={"success": False, "error": "max quantity 10"})
     cart_service._create_error_response = AsyncMock(return_value={"status": "error", "message": "max quantity 10"})
 
-    result = await cart_service.add_to_cart(product_url, cm_id, quantity)
+    result = await cart_service.add_to_cart(product_url, cm_id, product_variant, quantity)
 
     assert result["status"] == "error"
     assert result["message"] == "max quantity 10"

@@ -12,10 +12,13 @@ def mock_redis_repo():
 def mock_playwright_utils():
     return AsyncMock()
 
+@pytest.fixture
+def mock_handler_factory():
+    return AsyncMock()
 
 @pytest.fixture
-def checkout_service(mock_redis_repo, mock_playwright_utils):
-    return CheckoutService(mock_redis_repo, mock_playwright_utils)
+def checkout_service(mock_redis_repo, mock_playwright_utils, mock_handler_factory):
+    return CheckoutService(mock_redis_repo, mock_playwright_utils, mock_handler_factory)
 
 
 @pytest.mark.asyncio
