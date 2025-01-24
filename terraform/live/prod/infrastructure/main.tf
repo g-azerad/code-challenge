@@ -81,6 +81,8 @@ module "lambda" {
   source                    = "../../../modules/lambda"
   region                    = var.region
   api_name                  = "${var.application_name}-${var.environment}"
+  image_name                = var.image_name
+  image_tag                 = var.image_tag
   public_subnet_id          = module.network.public_subnet_id
   security_group_id         = module.network.instance_sg_id
   db_user_secret_name       = var.db_user_secret_name
@@ -97,6 +99,7 @@ module "lambda" {
 module "ecs" {
   source                    = "../../../modules/ecs"
   region                    = var.region
+  application_name          = var.application_name
   secrets_iam_policy_arn    = module.lambda.secrets_iam_policy_arn
   db_connect_iam_policy_arn = module.rds.db_connect_iam_policy_arn
   ecs_service_name          = "${var.application_name}-${var.environment}-ecs"
