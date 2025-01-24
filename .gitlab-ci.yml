@@ -92,6 +92,8 @@ unit-test:
   script:
     - apt-get update && apt-get install -y libpq-dev python3-dev build-essential
     - pip install -r requirements.txt
+    - pip install playwright==${PLAYWRIGHT_VERSION}
+    - playwright install chromium --with-deps
     - PYTHONPATH=app:. python -m unittest tests/services/test_cart_service.py
     - PYTHONPATH=app:. python -m unittest tests/services/test_checkout_service.py
 
