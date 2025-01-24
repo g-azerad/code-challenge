@@ -138,6 +138,7 @@ integration-test:
     DB_PASSWORD: kuuli
     DB_NAME: uni
     API_BASE_URL: http://api:8000
+    POSTGRES_CONN: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
     SELECTORS_PATH: "app/selectors"
   services:
     - name: ${CI_REGISTRY_IMAGE}/postgres-uni:latest

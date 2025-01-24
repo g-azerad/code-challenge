@@ -7,7 +7,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      POSTGRES_CONN: "postgresql://hoodie:kuuli@postgres:5432/hoodie"
+      POSTGRES_CONN: "postgresql://hoodie:kuuli@postgres:5432/uni"
       HEADLESS: "false"
       DISPLAY: $DISPLAY  # Allow container to use host display
       QT_X11_NO_MITSHM: "1"  # Prevent shared memory errors
@@ -32,7 +32,7 @@ services:
       POSTGRES_DB: postgres
       DB_USER: hoodie
       DB_PASSWORD: kuuli
-      DB_NAME: hoodie
+      DB_NAME: uni
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - db-contents:/var/lib/postgresql/data
