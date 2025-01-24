@@ -183,12 +183,12 @@ package-docker:
     name: gcr.io/kaniko-project/executor:$KANIKO_VERSION
     entrypoint: [""]
   rules:
-    - if: $DEPLOY_MODE == "Y"
-      when: never
     - if: !reference [.rules, tag_release]
-      changes: !reference [.changes, package]
+      changes: !reference [.changes, deploy_db]
     - if: !reference [.rules, latest]
-      changes: !reference [.changes, package]
+      changes: !reference [.changes, deploy_db]
+    - if: !reference [.rules, deploy_release]
+    - if: !reference [.rules, deploy_latest]
   script:
     - if [ X"$CI_COMMIT_TAG" == "X" ]; then IMAGE_TAG="latest"; else IMAGE_TAG=$CI_COMMIT_TAG; fi
     - echo "Info - the image will be pushed to '${AWS_ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}'"
