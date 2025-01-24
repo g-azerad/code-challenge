@@ -1,9 +1,9 @@
+import os
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from .dependencies import initialize_services, get_playwright_utils
-
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
@@ -18,6 +18,7 @@ async def lifespan(application: FastAPI):
     print("Shutdown event triggered")
     await playwright_utils.stop()
 
+# Creation of FastAPI application
 app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
