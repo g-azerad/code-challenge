@@ -8,6 +8,12 @@ variable "tf_state_name" {
   default     = "default"
 }
 
+variable "gitlab_project_id" {
+  description = "Gitlab project id to setup terraform state"
+  type        = string
+  default     = "7"
+}
+
 variable "region" {
   description = "AWS region"
   type        = string
