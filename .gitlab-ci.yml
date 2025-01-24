@@ -67,15 +67,7 @@ pylint:
       when: never
     - if: !reference [.rules, test]
       changes: !reference [.changes, build]
-  cache:
-    paths:
-      - .cache/pip
-    key:
-      files:
-        - requirements.txt
   script:
-    - apt install libpq-dev python3-dev
-    - pip install -r requirements.txt
     - pylint --exit-zero --ignore=__pycache__ --load-plugins=pylint_gitlab --output-format=gitlab-codeclimate:codeclimate.json app/
   artifacts:
     reports:
@@ -91,8 +83,15 @@ unit-test:
       when: never
     - if: !reference [.rules, test]
       changes: !reference [.changes, build]
+  cache:
+    paths:
+      - .cache/pip
+    key:
+      files:
+        - requirements.txt
   script:
-    # - pip install -r requirements.txt
+    - apt-get update && apt-get install -y libpq-dev python3-dev build-essential
+    - pip install -r requirements.txt
     - PYTHONPATH=app:. python -m unittest tests/services/test_cart_service.py
     - PYTHONPATH=app:. python -m unittest tests/services/test_checkout_service.py
 
