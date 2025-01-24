@@ -46,10 +46,29 @@ resource "aws_iam_role_policy_attachment" "lambda_secrets_policy_attachment" {
   policy_arn = aws_iam_policy.lambda_secrets_policy.arn
 }
 
-resource "aws_lambda_layer_version" "dependencies_layer" {
-  layer_name          = "${var.api_name}-dependencies"
-  compatible_runtimes = [var.lambda_runtime]
-  filename            = var.dependencies_package
+# Rights to access the app image into ECR
+resource "aws_iam_policy" "lambda_ecr_access" {
+  name        = "${var.api_name}-lambda-ecr-access"
+  description = "Allow Lambda to access ECR"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:GetAuthorizationToken"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_ecr_policy_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_ecr_access.arn
 }
 
 resource "aws_lambda_function" "lambda" {
@@ -76,6 +95,9 @@ resource "aws_lambda_function" "lambda" {
       DB_PORT        = var.db_port
       DB_NAME        = var.db_name
       DISPLAY        = var.display
+      SELECTORS_PATH = "app/selectors"
+      QT_X11_NO_MITSHM = "1"
+      AWS_EXECUTION_ENV = "true"
     }
   }
   tags = {

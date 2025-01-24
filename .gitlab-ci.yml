@@ -176,7 +176,7 @@ clean-test-docker:
     - regctl registry login ${CI_REGISTRY} -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD}
     - regctl tag rm $IMAGE
 
-# Package the application and publish it to Docker Hub
+# Package the application and publish it to AWS ECR
 package-docker:
   stage: package
   image:
@@ -196,8 +196,8 @@ package-docker:
       echo "
       {
         \"auths\":{
-          \"${DOCKERHUB_REGISTRY}\":{
-            \"auth\":\"$(printf "%s:%s" "${DOCKERHUB_USER}" "${DOCKERHUB_PASSWORD}" | base64 | tr -d '\n')\"
+          \"${AWS_ECR_REGISTRY}\":{
+            \"auth\":\"$(printf "%s:%s" "${AWS_ECR_USER}" "${AWS_ECR_PASSWORD}" | base64 | tr -d '\n')\"
           }
         }
       }" > /kaniko/.docker/config.json
@@ -205,7 +205,7 @@ package-docker:
       --context "$CI_PROJECT_DIR"
       --build-arg PYTHON_VERSION=$PYTHON_VERSION
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
-      --destination "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
+      --destination "${AWS_ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 
 # Deploy database changes with liquibase
 # Helper functions to determine if the database is ready for deployments (lines 28-33) or rollbacks (lines 35-42) when tag is applied.

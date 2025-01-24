@@ -16,17 +16,8 @@ class Config:
         import boto3
         from botocore.exceptions import BotoCoreError, ClientError
 
-        # Define variables
-        db_user = os.getenv('DB_USER')
-        db_host = os.getenv('DB_HOST')
-        db_port = os.getenv('DB_PORT', '5432')
-        db_name = os.getenv('DB_NAME')
-
-        def get_secret(db_user, db_host, db_port):
+        def get_secret(session, db_user, db_host, db_port):
             """Retrieves secret from AWS IAM or secrets manager"""
-            region_name = os.getenv('AWS_REGION', 'eu-west-3')
-            session = boto3.session.Session(region_name=region_name)
-
             # Get IAM token if IAM_AUTH environment variable is set
             iam_auth = os.getenv('IAM_AUTH', 'disabled')
             if iam_auth != 'disabled':
@@ -57,8 +48,17 @@ class Config:
             # If nothing is found, return None
             return None
 
+        # Define variables
+        db_user = os.getenv('DB_USER')
+        db_host = os.getenv('DB_HOST')
+        db_port = os.getenv('DB_PORT', '5432')
+        db_name = os.getenv('DB_NAME')
+
+        region_name = os.getenv('AWS_REGION', 'eu-west-3')
+        session = boto3.session.Session(region_name=region_name)
+
         # Retrieve secret
-        secret = get_secret(db_user, db_host, db_port)
+        secret = get_secret(session, db_user, db_host, db_port)
 
         # Build the database connection chain
         ssl_mode = os.getenv('SSL_MODE', 'prefer')

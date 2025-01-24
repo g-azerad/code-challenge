@@ -3,7 +3,7 @@ resource "aws_api_gateway_rest_api" "api_gateway" {
 }
 
 # Generic resource /{proxy+}
-resource "aws_api_gateway_resource" "counter_proxy" {
+resource "aws_api_gateway_resource" "api_proxy" {
   rest_api_id = aws_api_gateway_rest_api.api_gateway.id
   parent_id   = aws_api_gateway_rest_api.api_gateway.root_resource_id
   path_part   = "{proxy+}"
@@ -12,7 +12,7 @@ resource "aws_api_gateway_resource" "counter_proxy" {
 # ANY method for /counter endpoint and all the subpaths
 resource "aws_api_gateway_method" "proxy_any" {
   rest_api_id   = aws_api_gateway_rest_api.api_gateway.id
-  resource_id   = aws_api_gateway_resource.counter_proxy.id
+  resource_id   = aws_api_gateway_resource.api_proxy.id
   http_method   = "ANY"
   authorization = "NONE"
 
@@ -25,7 +25,7 @@ resource "aws_api_gateway_method" "proxy_any" {
 # The API integration depends from the target (lambda or ECS)
 resource "aws_api_gateway_integration" "api_integration" {
   rest_api_id             = aws_api_gateway_rest_api.api_gateway.id
-  resource_id             = aws_api_gateway_resource.counter_proxy.id
+  resource_id             = aws_api_gateway_resource.api_proxy.id
   http_method             = aws_api_gateway_method.proxy_any.http_method
   passthrough_behavior    = "WHEN_NO_MATCH"
   type                    = var.integration_target == "lambda" ? "AWS_PROXY" : "HTTP_PROXY"
