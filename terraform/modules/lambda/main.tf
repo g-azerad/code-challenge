@@ -55,16 +55,17 @@ resource "aws_lambda_layer_version" "dependencies_layer" {
 resource "aws_lambda_function" "lambda" {
   function_name = "${var.api_name}-lambda"
   role          = aws_iam_role.lambda_role.arn
-  handler       = var.lambda_handler
-  runtime       = var.lambda_runtime
-  filename      = var.lambda_zip_file
+  package_type  = "Image"
+  image_uri     = "${var.image_name}:${var.image_tag}"
+  image_config {
+    entry_point = ["/usr/local/bin/python", "-m", "awslambdaric"]
+    command     = ["lambda_function.handler"]
+    # working_directory = "/api-uni"
+  }
+  memory_size   = 512
   vpc_config {
     subnet_ids         = [var.public_subnet_id]
     security_group_ids = [var.security_group_id]
-  }
-  layers        = [aws_lambda_layer_version.dependencies_layer.arn]
-  lifecycle {
-    ignore_changes = [layers, filename]
   }
   environment {
     variables = {

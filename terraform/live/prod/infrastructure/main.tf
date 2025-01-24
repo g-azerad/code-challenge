@@ -83,8 +83,6 @@ module "lambda" {
   api_name                  = "${var.application_name}-${var.environment}"
   public_subnet_id          = module.network.public_subnet_id
   security_group_id         = module.network.instance_sg_id
-  lambda_zip_file           = var.lambda_zip_file
-  dependencies_package      = var.dependencies_package
   db_user_secret_name       = var.db_user_secret_name
   db_name                   = var.db_name
   db_username               = var.db_username

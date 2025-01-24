@@ -74,6 +74,7 @@ pylint:
       files:
         - requirements.txt
   script:
+    - apt install libpq-dev python3-dev
     - pip install -r requirements.txt
     - pylint --exit-zero --ignore=__pycache__ --load-plugins=pylint_gitlab --output-format=gitlab-codeclimate:codeclimate.json app/
   artifacts:
@@ -136,6 +137,7 @@ integration-test:
     DB_PASSWORD: kuuli
     DB_NAME: uni
     API_BASE_URL: http://api:8000
+    SELECTORS_PATH: "app/selectors"
   services:
     - name: ${CI_REGISTRY_IMAGE}/postgres-uni:latest
       alias: db
@@ -202,65 +204,6 @@ package-docker:
       --build-arg PYTHON_VERSION=$PYTHON_VERSION
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
       --destination "${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}"
-
-# Create zip packages to be exported to AWS Lambda
-package-lambda:
-  stage: package
-  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/python:${PYTHON_VERSION}-slim
-  artifacts:
-    paths:
-      - app_package.zip
-      - dependencies_layer.zip
-    expire_in: 1 day
-  rules:
-    - if: !reference [.rules, tag_release]
-      changes: !reference [.changes, package]
-    - if: !reference [.rules, latest]
-      changes: !reference [.changes, package]
-    - if: !reference [.rules, deploy_release]
-    - if: !reference [.rules, deploy_latest]
-  script:
-    - apt update && apt install --no-install-recommends -y zip
-    - zip -r app_package.zip lambda_function.py app/
-    - 'pip install --platform manylinux2014_x86_64 --target . --python-version 3.12 --only-binary=:all: -r requirements.txt -r requirements_aws.txt -t ./python/'
-    - zip -r dependencies_layer.zip python
-
-# Deploy the AWS Lambda
-deploy-app-lambda:
-  stage: deploy
-  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
-  rules:
-    - if: !reference [.rules, tag_release]
-      changes: !reference [.changes, deploy_lambda]
-    - if: !reference [.rules, latest]
-      changes: !reference [.changes, deploy_lambda]
-    - if: !reference [.rules, deploy_release]
-    - if: !reference [.rules, deploy_latest]
-  script:
-    # Deploy the Lambda function
-    - echo "Deploying Lambda function..."
-    - aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://app_package.zip
-
-# Deploy the AWS Lambda layer
-deploy-app-layer:
-  stage: deploy
-  image: registry.gitlab.com/gitlab-org/cloud-deploy/aws-base:latest
-  rules:
-    - if: !reference [.rules, tag_release]
-      changes: !reference [.changes, deploy_layer]
-    - if: !reference [.rules, latest]
-      changes: !reference [.changes, deploy_layer]
-    - if: !reference [.rules, deploy_release]
-    - if: !reference [.rules, deploy_latest]
-  script:
-    # Deploy the dependencies layer
-    - echo "Deploying Lambda layer..."
-    - aws lambda publish-layer-version --layer-name $LAYER_NAME --zip-file fileb://dependencies_layer.zip --compatible-runtimes python${PYTHON_VERSION}
-    # Capture the new layer ARN
-    - LAYER_ARN=$(aws lambda list-layer-versions --layer-name $LAYER_NAME --query 'LayerVersions[0].LayerVersionArn' --output text)
-    # Update the Lambda function to use the new layer
-    - echo "Updating Lambda function with new layer..."
-    - aws lambda update-function-configuration --function-name $FUNCTION_NAME --layers $LAYER_ARN
 
 # Deploy database changes with liquibase
 # Helper functions to determine if the database is ready for deployments (lines 28-33) or rollbacks (lines 35-42) when tag is applied.

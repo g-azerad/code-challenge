@@ -2,6 +2,7 @@
 python/
 dependencies_layer.zip
 app_package.zip
+playwright_layer.zip
 **/.terraform/
 *.tfstate
 *.tfstate.*
@@ -9,7 +10,6 @@ app_package.zip
 .aws/
 archive/
 node_modules/
-playwright/test-results
 .aws-sam/
 ssh/
 

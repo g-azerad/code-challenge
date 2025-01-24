@@ -19,28 +19,12 @@ variable "security_group_id" {
   type        = string
 }
 
-variable "lambda_zip_file" {
-  description = "Path to the ZIP file containing the Lambda function code"
-  type        = string
-  // default     = "../../../../app_package.zip"
+variable "image_name" {
+  description = "Docker image name used by the lambda"
 }
 
-variable "lambda_handler" {
-  description = "Handler for the Lambda function"
-  type        = string
-  default     = "app.handler"
-}
-
-variable "lambda_runtime" {
-  description = "Runtime for the Lambda function"
-  type        = string
-  default     = "python3.12"
-}
-
-variable "dependencies_package" {
-  description = "Dependencies zipped package"
-  type        = string
-  // default     = "../../../../dependencies_layer.zip"
+variable "image_tag" {
+  description = "Docker image tag from the image used by the lambda"
 }
 
 variable "db_user_secret_name" {

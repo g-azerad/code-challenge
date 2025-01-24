@@ -11,11 +11,12 @@ services:
       HEADLESS: "false"
       DISPLAY: $DISPLAY  # Allow container to use host display
       QT_X11_NO_MITSHM: "1"  # Prevent shared memory errors
-      SELECTORS_PATH: "app/selectors"  
+      SELECTORS_PATH: "app/selectors"
+    stop_signal: SIGKILL
     depends_on:
       - postgres
     volumes:
-      - ./app:/app
+      - ./app:/api-uni/app
       - /tmp/.X11-unix:/tmp/.X11-unix  # Share X11 socket with container
 
   postgres:

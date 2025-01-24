@@ -1,20 +1,23 @@
 ARG PYTHON_VERSION=3.12
 FROM python:${PYTHON_VERSION}-slim
-ARG PLAYWRIGHT_VERSION=1.46.0
+ARG PLAYWRIGHT_VERSION=1.49.1
 
 # Install Xvfb and dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends xvfb
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb libpq-dev python3-dev build-essential
 
 # Install Playwright and dependencies
 RUN pip install --no-cache-dir playwright==${PLAYWRIGHT_VERSION} && \
-    playwright install --with-deps
+    playwright install chromium --with-deps
 
 # Application part; install requirements
 COPY requirements.txt /tmp/requirements.txt
 COPY requirements_aws.txt /tmp/requirements_aws.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements_aws.txt
 
-COPY app app
+COPY lambda_function.py /api-uni/lambda_function.py
+COPY app /api-uni/app
+
+WORKDIR /api-uni
 
 EXPOSE 8000
 
