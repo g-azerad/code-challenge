@@ -191,7 +191,7 @@ package-docker:
       changes: !reference [.changes, package]
   script:
     - if [ X"$CI_COMMIT_TAG" == "X" ]; then IMAGE_TAG="latest"; else IMAGE_TAG=$CI_COMMIT_TAG; fi
-    - echo "Info - the image will be pushed with '$IMAGE_TAG' tag"
+    - echo "Info - the image will be pushed to '${AWS_ECR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}'"
     - |-
       echo "
       {
