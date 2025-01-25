@@ -84,7 +84,7 @@ resource "aws_lambda_function" "lambda" {
     # command = ["lambda_function.handler"]
     # working_directory = "/api-uni"
   }
-  memory_size   = 512
+  memory_size   = 1024
   vpc_config {
     subnet_ids         = [var.public_subnet_id]
     security_group_ids = [var.security_group_id]
@@ -100,7 +100,7 @@ resource "aws_lambda_function" "lambda" {
       DISPLAY        = var.display
       SELECTORS_PATH = "app/selectors"
       QT_X11_NO_MITSHM = "1"
-      AWS_EXECUTION_ENV = "true"
+      # AWS_EXECUTION_ENV = "true"
     }
   }
   tags = {
