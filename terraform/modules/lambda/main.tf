@@ -77,8 +77,8 @@ resource "aws_lambda_function" "lambda" {
   package_type  = "Image"
   image_uri     = "${var.image_name}:${var.image_tag}"
   image_config {
-    entry_point = ["/usr/local/bin/python", "-m", "awslambdaric"]
-    command     = ["lambda_function.handler"]
+    entry_point = ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 & exec /usr/local/bin/python -m awslambdaric"]
+    command = ["lambda_function.handler"]
     # working_directory = "/api-uni"
   }
   memory_size   = 512

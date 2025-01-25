@@ -37,11 +37,7 @@ workflow:
   package:
     - Dockerfile
     - app/**/*
-    - requirements.txt
-    - requirements_aws.txt
-  deploy_lambda:
-    - app/**/*
-  deploy_layer:
+    - lambda_function.py
     - requirements.txt
     - requirements_aws.txt
   deploy_db:
