@@ -180,9 +180,9 @@ package-docker:
     entrypoint: [""]
   rules:
     - if: !reference [.rules, tag_release]
-      changes: !reference [.changes, deploy_db]
+      changes: !reference [.changes, package]
     - if: !reference [.rules, latest]
-      changes: !reference [.changes, deploy_db]
+      changes: !reference [.changes, package]
     - if: !reference [.rules, deploy_release]
     - if: !reference [.rules, deploy_latest]
   script:
