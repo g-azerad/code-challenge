@@ -1,3 +1,4 @@
+import os
 from playwright.async_api import async_playwright, Browser
 from app.config import Config
 
@@ -9,7 +10,10 @@ class PlaywrightUtils:
 
     async def start(self):
         self.playwright_instance = await async_playwright().start()
-        self.browser = await self.playwright_instance.chromium.launch(headless=Config.HEADLESS)
+        if os.getenv("AWS_EXECUTION_ENV") is not None:
+            self.browser = await self.playwright_instance.chromium.launch(headless=Config.HEADLESS, args=["--single-process"])
+        else:
+            self.browser = await self.playwright_instance.chromium.launch(headless=Config.HEADLESS)
 
     async def stop(self):
         if self.browser:
