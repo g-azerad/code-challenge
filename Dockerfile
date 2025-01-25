@@ -3,7 +3,7 @@ FROM python:${PYTHON_VERSION}-slim
 ARG PLAYWRIGHT_VERSION=1.49.1
 
 # Install Xvfb and dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends xvfb libpq-dev python3-dev build-essential
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb libpq-dev python3-dev build-essential xauth
 
 # Install Playwright and dependencies
 RUN pip install --no-cache-dir playwright==${PLAYWRIGHT_VERSION} && \
