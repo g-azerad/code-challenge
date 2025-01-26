@@ -18,7 +18,7 @@ resource "aws_lb_target_group" "ecs_target_group" {
   vpc_id      = var.vpc_id
   target_type = "ip" # required for Fargate
 
-  health_check {
+  /*health_check {
     protocol            = "HTTP"
     path                = "/healthcheck"
     matcher             = "200"
@@ -26,7 +26,7 @@ resource "aws_lb_target_group" "ecs_target_group" {
     timeout             = 5
     healthy_threshold   = 3
     unhealthy_threshold = 2
-  }
+  }*/
 
   tags = {
     Name = "${var.ecs_service_name}-tg"
@@ -171,7 +171,7 @@ resource "aws_ecs_task_definition" "ecs_task" {
       { 
         name  = "APP_PORT"
         value = "80"
-      }
+      },
       {
         name  = "DB_USER"
         value = var.db_username
@@ -225,7 +225,7 @@ resource "aws_ecs_service" "ecs_service" {
   network_configuration {
     subnets          = [var.public_subnet_id]
     security_groups = [var.security_group_id]
-    assign_public_ip = true # Required to download images from Docker Hub
+    # assign_public_ip = true # Required to download images from Docker Hub
   }
 
   load_balancer {
