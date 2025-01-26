@@ -198,6 +198,7 @@ package-docker:
         }
       }" > /kaniko/.docker/config.json
     - /kaniko/executor
+      --cache=true
       --context "$CI_PROJECT_DIR"
       --build-arg PYTHON_VERSION=$PYTHON_VERSION
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"

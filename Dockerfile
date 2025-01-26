@@ -26,6 +26,8 @@ COPY db/rds/eu-west-3-bundle.pem /etc/ssl/certs
 
 WORKDIR /api-uni
 
+# Application is exposed to 8000 port but it can be overidden
 EXPOSE 8000
+ENV APP_PORT=8000
 
-CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 & export DISPLAY=:99 && fastapi run ./app/main.py"]
+CMD ["sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 & export DISPLAY=:99 && fastapi run ./app/main.py --host 0.0.0.0 --port $APP_PORT"]

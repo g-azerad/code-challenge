@@ -161,17 +161,17 @@ resource "aws_ecs_task_definition" "ecs_task" {
     }
     environment = [
       {
-        name  = "FLASK_ENV"
-        value = "production"
+        name  = "SELECTORS_PATH"
+        value = "app/selectors"
       },
       {
-        name  = "FLASK_PORT"
+        name  = "QT_X11_NO_MITSHM"
+        value = "1"
+      },
+      { 
+        name  = "APP_PORT"
         value = "80"
-      },
-      {
-        name  = "DEBUG_MODE"
-        value = var.debug_mode
-      },
+      }
       {
         name  = "DB_USER"
         value = var.db_username
