@@ -20,6 +20,10 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt -r /tmp/requirements_aws
 COPY lambda_function.py /api-uni/lambda_function.py
 COPY app /api-uni/app
 
+# Also copying Amazon RDS cert bundle for eu-west-3 region
+# Only used by ECS
+COPY db/rds/eu-west-3-bundle.pem /etc/ssl/certs
+
 WORKDIR /api-uni
 
 EXPOSE 8000

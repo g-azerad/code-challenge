@@ -91,15 +91,15 @@ resource "aws_lambda_function" "lambda" {
   }
   environment {
     variables = {
-      FLASK_ENV      = "production"
       DB_USER        = var.db_username
       DB_USER_SECRET = var.db_user_secret_name
       DB_HOST        = var.db_host
       DB_PORT        = var.db_port
       DB_NAME        = var.db_name
-      DISPLAY        = var.display
+      # DISPLAY        = var.display
       SELECTORS_PATH = "app/selectors"
       QT_X11_NO_MITSHM = "1"
+      # HOME           = "/tmp"
       # AWS_EXECUTION_ENV = "true"
     }
   }

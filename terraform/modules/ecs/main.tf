@@ -135,16 +135,16 @@ resource "aws_ecs_task_definition" "ecs_task" {
   family                = "${var.ecs_service_name}-task"
   network_mode          = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu       = 256
-  memory    = 512
+  cpu       = 512
+  memory    = 1024
   execution_role_arn    = aws_iam_role.ecs_task_execution_role.arn
   task_role_arn         = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([{
     name      = "${var.application_name}-container"
     image     = "${var.image_name}:${var.image_tag}"
-    cpu       = 256
-    memory    = 512
+    cpu       = 512
+    memory    = 1024
     essential = true
     portMappings = [{
       containerPort = 80

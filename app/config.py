@@ -8,10 +8,8 @@ class Config:
     SELECTORS_PATH = os.getenv("SELECTORS_PATH")
     POSTGRES_CONN = os.getenv("POSTGRES_CONN")
 
-    # Variable to detect if we are on AWS
-    IS_AWS = os.getenv("AWS_EXECUTION_ENV") is not None
-
-    if IS_AWS:
+    # Detect if we are on AWS
+    if os.getenv("AWS_EXECUTION_ENV") is not None:
         # Import boto3 solely if we are into AWS environment
         import boto3
         from botocore.exceptions import BotoCoreError, ClientError
@@ -21,6 +19,7 @@ class Config:
             # Get IAM token if IAM_AUTH environment variable is set
             iam_auth = os.getenv('IAM_AUTH', 'disabled')
             if iam_auth != 'disabled':
+                print("Getting token from AWS IAM")
                 try:
                     token = session.client('rds').generate_db_auth_token(
                     DBHostname=db_host,
@@ -33,6 +32,7 @@ class Config:
             # Then get password from AWS Secrets manager
             secret_name = os.getenv('DB_USER_SECRET')
             if secret_name:
+                print("Getting password from AWS Secrets manager")
                 try:
                     secrets_client = session.client(service_name="secretsmanager")
                     secret_value_response = secrets_client.get_secret_value(SecretId=secret_name)
@@ -44,6 +44,7 @@ class Config:
 
             # Else, test if a password is directly provided
             if os.getenv('DB_PASSWORD'):
+                print("Getting password from environment variable")
                 return os.getenv('DB_PASSWORD')
             # If nothing is found, return None
             return None
