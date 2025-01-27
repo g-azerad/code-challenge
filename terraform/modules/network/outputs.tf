@@ -30,6 +30,10 @@ output "bastion_sg_id" {
   value = aws_security_group.bastion_sg.id
 }
 
+output "bastion_sg_ingress_id" {
+  value = aws_vpc_security_group_ingress_rule.bastion_sg_ingress.security_group_rule_id
+}
+
 output "bastion_eni_id" {
   value = aws_network_interface.bastion_eni.id
 }

@@ -115,25 +115,28 @@ resource "aws_security_group" "database_sg" {
 resource "aws_security_group" "bastion_sg" {
   vpc_id = aws_vpc.main_vpc.id
 
-  ingress {
-    description = "Allow SSH access from your IP"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [] # To be set later
-  }
-
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
   tags = {
     Name = "${var.name}-bastion-sg"
   }
+}
+
+# Here we define the ingress and egress rules apart
+resource "aws_vpc_security_group_ingress_rule" "bastion_sg_ingress" {
+  security_group_id = aws_security_group.bastion_sg.id
+
+  description = "Allow SSH access from your IP"
+  from_port   = 22
+  to_port     = 22
+  ip_protocol = "tcp"
+  cidr_ipv4   = var.bastion_cidr_ipv4
+}
+
+resource "aws_vpc_security_group_egress_rule" "bastion_sg_egress" {
+  security_group_id = aws_security_group.bastion_sg.id
+
+  description = "Allow all outbound traffic"
+  ip_protocol = "-1"
+  cidr_ipv4   = "0.0.0.0/0"
 }
 
 # Create a network interface to detach security group

@@ -34,18 +34,9 @@ data "external" "config" {
 
 # Importing network module to create network configuration
 module "network" {
-  source = "../../../modules/network"
-  name   = "${var.application_name}-${var.environment}"
-}
-
-# Setting the ingress rule for bastion SSH access
-resource "aws_vpc_security_group_ingress_rule" "bastion_sg" {
-  security_group_id = module.network.bastion_sg_id
-
-  from_port   = 22
-  to_port     = 22
-  ip_protocol = "tcp"
-  cidr_ipv4   = "${data.external.config.result["public_ip"]}/32"
+  source            = "../../../modules/network"
+  name              = "${var.application_name}-${var.environment}"
+  bastion_cidr_ipv4 = "${data.external.config.result["public_ip"]}/32"
 }
 
 # Creating the SSH bastion
