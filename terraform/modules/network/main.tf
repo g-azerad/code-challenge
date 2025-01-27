@@ -152,7 +152,7 @@ resource "aws_eip" "bastion_eip" {
   depends_on        = [aws_network_interface.bastion_eni]
 }
 
-# Endpoint VPC pour accès à Secrets Manager
+# VPC endpoint to access Secrets Manager
 resource "aws_vpc_endpoint" "secretsmanager_endpoint" {
   vpc_id              = aws_vpc.main_vpc.id
   service_name        = "com.amazonaws.${var.region}.secretsmanager"
@@ -160,4 +160,64 @@ resource "aws_vpc_endpoint" "secretsmanager_endpoint" {
   private_dns_enabled = true
   subnet_ids          = [aws_subnet.public_subnet.id]
   security_group_ids  = [aws_security_group.instance_sg.id]
+}
+
+# VPC endpoints required by ECS cluster to access ECR
+resource "aws_vpc_endpoint" "service_endpoints" {
+  for_each = var.integration_target == "ecs" ? {
+    "ecr_api" = {
+      service_name = "com.amazonaws.${var.region}.ecr.api"
+      endpoint_type = "Interface"
+      security_group_ids = [aws_security_group.instance_sg.id]
+      subnet_ids = [aws_subnet.public_subnet.id]
+      route_table_ids = []
+      private_dns_enabled = true
+    }
+    "ecr_dkr" = {
+      service_name = "com.amazonaws.${var.region}.ecr.dkr"
+      endpoint_type = "Interface"
+      security_group_ids = [aws_security_group.instance_sg.id]
+      subnet_ids = [aws_subnet.public_subnet.id]
+      route_table_ids = []
+      private_dns_enabled = true
+    }
+    "s3" = {
+      service_name = "com.amazonaws.${var.region}.s3"
+      endpoint_type = "Gateway"
+      security_group_ids = []
+      subnet_ids = []
+      route_table_ids = [aws_route_table.public_rt.id]
+      private_dns_enabled = false
+    }
+    "cloudwatch_logs" = {
+      service_name = "com.amazonaws.${var.region}.logs"
+      endpoint_type = "Interface"
+      security_group_ids = [aws_security_group.instance_sg.id]
+      subnet_ids = [aws_subnet.public_subnet.id]
+      route_table_ids = []
+      private_dns_enabled = true
+    }
+    "cloudwatch_metrics" = {
+      service_name = "com.amazonaws.${var.region}.monitoring"
+      endpoint_type = "Interface"
+      security_group_ids = [aws_security_group.instance_sg.id]
+      subnet_ids = [aws_subnet.public_subnet.id]
+      route_table_ids = []
+      private_dns_enabled = true
+    }
+  } : {}
+
+  vpc_id            = aws_vpc.main_vpc.id
+  service_name      = each.value.service_name
+  vpc_endpoint_type = each.value.endpoint_type
+
+  security_group_ids = each.value.security_group_ids
+  subnet_ids         = each.value.subnet_ids
+  route_table_ids    = each.value.route_table_ids
+
+  private_dns_enabled = each.value.private_dns_enabled
+
+  tags = {
+    Name = "${var.name}-${each.key}-endpoint"
+  }
 }

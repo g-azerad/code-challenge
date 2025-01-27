@@ -40,7 +40,7 @@ resource "aws_api_gateway_integration" "api_integration" {
   } : null
 }
 
-# Defining deployment
+# Defining deployment with logging enabled
 
 resource "aws_api_gateway_deployment" "deployment" {
   rest_api_id = aws_api_gateway_rest_api.api_gateway.id
@@ -55,4 +55,60 @@ resource "aws_api_gateway_stage" "api_stage" {
   stage_name            = "prod"
   description           = "Production stage"
   cache_cluster_enabled = false
+
+  depends_on    = [aws_cloudwatch_log_group.api_gateway_log_group]
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway_log_group.arn
+    format = jsonencode({
+      requestId        = "$context.requestId"
+      requestTime      = "$context.requestTime"
+      requestTimeEpoch = "$context.requestTimeEpoch"
+      path             = "$context.path"
+      method           = "$context.httpMethod"
+      status           = "$context.status"
+      responseLength   = "$context.responseLength"
+    })
+  }
+}
+
+resource "aws_iam_role" "api_gateway_logs_role" {
+  name = "api-gateway-logs-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action    = "sts:AssumeRole"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+        Effect    = "Allow"
+        Sid       = ""
+      },
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_logs_policy" {
+  role       = aws_iam_role.api_gateway_logs_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+resource "aws_cloudwatch_log_group" "api_gateway_log_group" {
+  name              = "/api_gateway/${var.api_name}"
+  retention_in_days = 7
+}
+
+resource "aws_api_gateway_account" "api_gateway_account" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_logs_role.arn
+}
+
+resource "aws_api_gateway_method_settings" "proxy_any_settings" {
+  rest_api_id = aws_api_gateway_rest_api.api_gateway.id
+  stage_name  = aws_api_gateway_stage.api_stage.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled = true
+    logging_level   = "INFO"
+  }
 }

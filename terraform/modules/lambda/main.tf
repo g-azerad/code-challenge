@@ -27,7 +27,7 @@ data "aws_secretsmanager_secret" "db_user_secret" {
 }
 
 resource "aws_iam_policy" "lambda_secrets_policy" {
-  name        = "${var.api_name}-secrets-policy"
+  name        = "${var.api_name}-lambda-secrets-policy"
   description = "Policy to access Secrets Manager"
   policy      = jsonencode({
     Version = "2012-10-17",

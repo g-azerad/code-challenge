@@ -37,6 +37,7 @@ module "network" {
   source            = "../../../modules/network"
   name              = "${var.application_name}-${var.environment}"
   bastion_cidr_ipv4 = "${data.external.config.result["public_ip"]}/32"
+  integration_target   = var.integration_target
 }
 
 # Creating the SSH bastion
@@ -69,6 +70,7 @@ module "rds" {
 
 # Creating the Lambda to run the API
 module "lambda" {
+  count                     = (var.integration_target == "ecs" ? 0 : 1)
   source                    = "../../../modules/lambda"
   region                    = var.region
   api_name                  = "${var.application_name}-${var.environment}"
@@ -88,13 +90,12 @@ module "lambda" {
 
 # Creates the ECS instance running API container if integration target is "ecs"
 module "ecs" {
+  count                     = (var.integration_target == "ecs" ? 1 : 0)
   source                    = "../../../modules/ecs"
   region                    = var.region
   application_name          = var.application_name
-  secrets_iam_policy_arn    = module.lambda.secrets_iam_policy_arn
   db_connect_iam_policy_arn = module.rds.db_connect_iam_policy_arn
   ecs_service_name          = "${var.application_name}-${var.environment}-ecs"
-  count                     = (var.integration_target == "ecs" ? 1 : 0)
   vpc_id                    = module.network.vpc_id
   image_name                = var.image_name
   image_tag                 = var.image_tag
@@ -116,7 +117,7 @@ module "api_gateway" {
   source               = "../../../modules/api_gateway"
   api_name             = "${var.application_name}-${var.environment}"
   integration_target   = var.integration_target
-  lambda_invoke_arn    = (var.integration_target == "lambda" ? module.lambda.lambda_invoke_arn : null)
+  lambda_invoke_arn    = (var.integration_target == "lambda" ? module.lambda[0].lambda_invoke_arn : null)
   ecs_vpc_link_id      = (var.integration_target == "ecs" ? module.ecs[0].ecs_vpc_link_id : null)
   ecs_lb_uri           = (var.integration_target == "ecs" ? module.ecs[0].ecs_lb_uri : null)
 }

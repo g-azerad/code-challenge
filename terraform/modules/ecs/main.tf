@@ -63,10 +63,30 @@ resource "aws_iam_role" "ecs_task_role" {
   })
 }
 
+# Define policy to access secrets manager and attach it
+data "aws_secretsmanager_secret" "db_user_secret" {
+  name = var.db_user_secret_name
+}
+
+resource "aws_iam_policy" "ecs_secrets_policy" {
+  name        = "${var.ecs_service_name}-ecs-secrets-policy"
+  description = "Policy to access Secrets Manager"
+  policy      = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = "secretsmanager:GetSecretValue",
+        Effect = "Allow",
+        Resource = data.aws_secretsmanager_secret.db_user_secret.arn
+      }
+    ]
+  })
+}
+
 # Attach existing IAM policy to access secrets manager
 resource "aws_iam_role_policy_attachment" "task_role_secrets_manager_access" {
   role       = aws_iam_role.ecs_task_role.name
-  policy_arn = var.secrets_iam_policy_arn
+  policy_arn = aws_iam_policy.ecs_secrets_policy.arn
 }
 
 # Attach RDS db connection policy to the task role
